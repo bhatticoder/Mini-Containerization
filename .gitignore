@@ -1,0 +1,6 @@
+bin/
+containers/*
+!containers/engine_state.dat
+*.exe
+*.o
+.vscode/
