@@ -1,22 +1,20 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
-#include <iostream>
-#include <vector>
-#include <string>
+#include <string.h>
+#include <stdlib.h>
 
-enum class ProcessState {
+typedef enum {
     NEW,
     READY,
     RUNNING,
     WAITING,
     TERMINATED
-};
+} ProcessState;
 
-class Process {
-public:
+typedef struct {
     int pid;
-    std::string name;
+    char name[256];
     int arrivalTime;
     int burstTime;
     int remainingTime;
@@ -25,11 +23,12 @@ public:
     int waitingTime;
     int turnaroundTime;
     int completionTime;
+} Process;
 
-    Process(int id, std::string n, int arrival, int burst, int prio = 0)
-        : pid(id), name(n), arrivalTime(arrival), burstTime(burst), 
-          remainingTime(burst), priority(prio), state(ProcessState::NEW),
-          waitingTime(0), turnaroundTime(0), completionTime(0) {}
-};
+// Constructor-like function
+Process* Process_Create(int id, const char* name, int arrival, int burst, int priority);
+
+// Destructor-like function
+void Process_Destroy(Process* p);
 
 #endif

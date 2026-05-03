@@ -1,57 +1,26 @@
 #ifndef BANKERS_ALGORITHM_H
 #define BANKERS_ALGORITHM_H
 
-#include <vector>
-#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-class BankersAlgorithm {
-    int n, m;
-    std::vector<std::vector<int>> allocation;
-    std::vector<std::vector<int>> max_need;
-    std::vector<int> available;
+#define MAX_PROCESSES 100
+#define MAX_RESOURCES 100
 
-public:
-    BankersAlgorithm(int processes, int resources) 
-        : n(processes), m(resources) {
-        allocation.resize(n, std::vector<int>(m, 0));
-        max_need.resize(n, std::vector<int>(m, 0));
-        available.resize(m, 0);
-    }
+typedef struct {
+    int n;  // number of processes
+    int m;  // number of resources
+    int allocation[MAX_PROCESSES][MAX_RESOURCES];
+    int max_need[MAX_PROCESSES][MAX_RESOURCES];
+    int available[MAX_RESOURCES];
+} BankersAlgorithm;
 
-    void setAvailable(std::vector<int> avail) { available = avail; }
-    void setAllocation(int p, std::vector<int> alloc) { allocation[p] = alloc; }
-    void setMaxNeed(int p, std::vector<int> max) { max_need[p] = max; }
-
-    bool isSafe() {
-        std::vector<int> work = available;
-        std::vector<bool> finish(n, false);
-        std::vector<std::vector<int>> need(n, std::vector<int>(m));
-
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < m; j++)
-                need[i][j] = max_need[i][j] - allocation[i][j];
-
-        int count = 0;
-        while (count < n) {
-            bool found = false;
-            for (int p = 0; p < n; p++) {
-                if (!finish[p]) {
-                    int j;
-                    for (j = 0; j < m; j++)
-                        if (need[p][j] > work[j]) break;
-
-                    if (j == m) {
-                        for (int k = 0; k < m; k++) work[k] += allocation[p][k];
-                        finish[p] = true;
-                        found = true;
-                        count++;
-                    }
-                }
-            }
-            if (!found) return false; // Unsafe state
-        }
-        return true; // Safe state
-    }
-};
+BankersAlgorithm* BankersAlgorithm_Create(int processes, int resources);
+void BankersAlgorithm_Destroy(BankersAlgorithm* ba);
+void BankersAlgorithm_SetAvailable(BankersAlgorithm* ba, int* avail);
+void BankersAlgorithm_SetAllocation(BankersAlgorithm* ba, int p, int* alloc);
+void BankersAlgorithm_SetMaxNeed(BankersAlgorithm* ba, int p, int* max);
+bool BankersAlgorithm_IsSafe(BankersAlgorithm* ba);
 
 #endif

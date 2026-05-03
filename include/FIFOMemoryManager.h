@@ -1,34 +1,23 @@
 #ifndef FIFO_MEMORY_MANAGER_H
 #define FIFO_MEMORY_MANAGER_H
 
-#include <vector>
-#include <queue>
-#include <unordered_set>
-#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 
-class FIFOMemoryManager {
+#define MAX_PAGES 1024
+
+typedef struct {
     int capacity;
-    std::queue<int> fifo_queue;
-    std::unordered_set<int> page_set;
     int page_faults;
+    int fifo_queue[MAX_PAGES];
+    int queue_front;
+    int queue_size;
+    int page_set[MAX_PAGES];  // 1 if page is present, 0 otherwise
+} FIFOMemoryManager;
 
-public:
-    FIFOMemoryManager(int cap) : capacity(cap), page_faults(0) {}
-
-    void accessPage(int pageId) {
-        if (page_set.find(pageId) == page_set.end()) {
-            page_faults++;
-            if (fifo_queue.size() == capacity) {
-                int oldest = fifo_queue.front();
-                fifo_queue.pop();
-                page_set.erase(oldest);
-            }
-            fifo_queue.push(pageId);
-            page_set.insert(pageId);
-        }
-    }
-
-    int getPageFaults() { return page_faults; }
-};
+FIFOMemoryManager* FIFOMemoryManager_Create(int capacity);
+void FIFOMemoryManager_Destroy(FIFOMemoryManager* fm);
+void FIFOMemoryManager_AccessPage(FIFOMemoryManager* fm, int pageId);
+int FIFOMemoryManager_GetPageFaults(FIFOMemoryManager* fm);
 
 #endif

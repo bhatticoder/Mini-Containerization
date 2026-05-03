@@ -1,69 +1,48 @@
 #ifndef RESOURCE_SYNC_H
 #define RESOURCE_SYNC_H
 
-#include <mutex>
-#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifdef _WIN32
 #include <windows.h>
-// Simple wrapper for semaphore simulation on Windows if POSIX semaphore.h is missing
-class WinSemaphore {
+
+typedef struct {
     HANDLE sem;
-public:
-    WinSemaphore(int initial) { sem = CreateSemaphore(NULL, initial, 10, NULL); }
-    ~WinSemaphore() { CloseHandle(sem); }
-    void wait() { WaitForSingleObject(sem, INFINITE); }
-    void post() { ReleaseSemaphore(sem, 1, NULL); }
-};
+} WinSemaphore;
+
+WinSemaphore* WinSemaphore_Create(int initial);
+void WinSemaphore_Destroy(WinSemaphore* ws);
+void WinSemaphore_Wait(WinSemaphore* ws);
+void WinSemaphore_Post(WinSemaphore* ws);
+
 #else
 #include <semaphore.h>
+#include <pthread.h>
+
+typedef struct {
+    sem_t sem;
+} UnixSemaphore;
+
+UnixSemaphore* UnixSemaphore_Create(int initial);
+void UnixSemaphore_Destroy(UnixSemaphore* us);
+void UnixSemaphore_Wait(UnixSemaphore* us);
+void UnixSemaphore_Post(UnixSemaphore* us);
 #endif
 
-class ResourceSync {
-    std::mutex fileMutex;
+typedef struct {
 #ifdef _WIN32
-    WinSemaphore deviceSemaphore;
+    CRITICAL_SECTION fileMutex;
+    WinSemaphore* deviceSemaphore;
 #else
-    sem_t deviceSemaphore;
+    pthread_mutex_t fileMutex;
+    UnixSemaphore* deviceSemaphore;
 #endif
+} ResourceSync;
 
-public:
-    ResourceSync() 
-#ifdef _WIN32
-        : deviceSemaphore(1) 
-#endif
-    {
-#ifndef _WIN32
-        sem_init(&deviceSemaphore, 0, 1); // Binary semaphore
-#endif
-    }
-
-    ~ResourceSync() {
-#ifndef _WIN32
-        sem_destroy(&deviceSemaphore);
-#endif
-    }
-
-    void accessSharedFile(int containerId) {
-        std::lock_guard<std::mutex> lock(fileMutex);
-        std::cout << "Container " << containerId << " is writing to shared file." << std::endl;
-        // Simulate file I/O
-    }
-
-    void useSharedDevice(int containerId) {
-#ifdef _WIN32
-        deviceSemaphore.wait();
-#else
-        sem_wait(&deviceSemaphore);
-#endif
-        std::cout << "Container " << containerId << " is using shared device." << std::endl;
-        // Simulate device usage
-#ifdef _WIN32
-        deviceSemaphore.post();
-#else
-        sem_post(&deviceSemaphore);
-#endif
-    }
-};
+ResourceSync* ResourceSync_Create(void);
+void ResourceSync_Destroy(ResourceSync* rs);
+void ResourceSync_AccessSharedFile(ResourceSync* rs, int containerId);
+void ResourceSync_UseSharedDevice(ResourceSync* rs, int containerId);
 
 #endif
