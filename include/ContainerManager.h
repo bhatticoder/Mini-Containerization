@@ -14,7 +14,7 @@ typedef int pid_t;
 #endif
 
 #define MAX_CONTAINERS 256
-#define STATE_FILE "containers/engine_state.dat"
+#define STATE_FILE "campaigns/engine_state.dat"
 
 typedef struct {
     char name[256];

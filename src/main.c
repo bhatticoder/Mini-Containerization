@@ -17,17 +17,17 @@
 
 void printHelp() {
     printf("\n==============================================\n");
-    printf("    LITECONTAINER ENGINE - DOCKER CLI\n");
+    printf("    B2B MARKETING CAMPAIGN SYSTEM\n");
     printf("==============================================\n");
     printf("COMMANDS:\n");
-    printf("  config <ram_mb> <disk_mb>           - Set total system resources\n");
-    printf("  run <name> <task> [-m mem] [-d disk] - Create container with quotas\n");
-    printf("  ps                                  - List containers & usage\n");
-    printf("  stop <name>                         - Stop container\n");
-    printf("  stats/compare                       - Benchmarking & Simulation Reports\n");
-    printf("  sync                                - Resource sync demo\n");
+    printf("  config <budget> <capacity>          - Set global marketing resources\n");
+    printf("  launch <agency> <campaign> [-b budget] [-c capacity] - Launch campaign with quotas\n");
+    printf("  campaigns                           - List campaigns & resource usage\n");
+    printf("  pause <agency>                      - Pause campaign execution\n");
+    printf("  analytics                           - Campaign performance reports\n");
+    printf("  sync                                - Resource synchronization demo\n");
     printf("  help                                - Show help\n");
-    printf("  exit                                - Exit\n");
+    printf("  exit                                - Exit system\n");
     printf("==============================================\n\n");
 }
 
@@ -35,6 +35,23 @@ typedef struct {
     char* tokens[MAX_TOKENS];
     int count;
 } TokenList;
+
+void trimWhitespace(char* str) {
+    if (!str) return;
+    size_t start = 0;
+    size_t end = strlen(str);
+
+    while (start < end && (str[start] == ' ' || str[start] == '\t' || str[start] == '\n' || str[start] == '\r')) {
+        start++;
+    }
+    while (end > start && (str[end-1] == ' ' || str[end-1] == '\t' || str[end-1] == '\n' || str[end-1] == '\r')) {
+        end--;
+    }
+    if (start > 0) {
+        memmove(str, str + start, end - start);
+    }
+    str[end - start] = '\0';
+}
 
 void tokenize(const char* line, TokenList* tokens) {
     tokens->count = 0;
@@ -64,15 +81,11 @@ int main() {
     char line[MAX_INPUT];
     
     while (1) {
-        printf("docker-lite> ");
+        printf("marketing-sim> ");
         
         if (!fgets(line, sizeof(line), stdin)) break;
         
-        // Remove newline
-        size_t len = strlen(line);
-        if (len > 0 && line[len-1] == '\n') {
-            line[len-1] = '\0';
-        }
+        trimWhitespace(line);
         
         if (strcmp(line, "exit") == 0) break;
         
@@ -87,43 +100,46 @@ int main() {
         
         if (strcmp(cmd, "config") == 0) {
             if (tokens.count >= 3) {
-                int r = atoi(tokens.tokens[1]);
-                int d = atoi(tokens.tokens[2]);
-                ContainerManager_SetGlobalResources(cm, r, d);
+                int budget = atoi(tokens.tokens[1]);
+                int capacity = atoi(tokens.tokens[2]);
+                ContainerManager_SetGlobalResources(cm, budget, capacity);
+                printf("[System] Marketing Resources Set: Budget=$%dK, Capacity=%d\n", budget, capacity);
             } else {
-                printf("Usage: config <ram_mb> <disk_mb>\n");
+                printf("Usage: config <budget_$1000s> <team_capacity>\n");
             }
         }
-        else if (strcmp(cmd, "run") == 0) {
+        else if (strcmp(cmd, "launch") == 0) {
             if (tokens.count >= 3) {
-                const char* name = tokens.tokens[1];
-                const char* task = tokens.tokens[2];
-                int mem = 256, disk = 1000, prio = 1;
+                const char* agency = tokens.tokens[1];
+                const char* campaign = tokens.tokens[2];
+                int budget = 50, capacity = 10, prio = 1;
                 
                 // Parse options
                 for (int i = 3; i < tokens.count - 1; i++) {
-                    if (strcmp(tokens.tokens[i], "-m") == 0) {
-                        mem = atoi(tokens.tokens[i+1]);
-                    } else if (strcmp(tokens.tokens[i], "-d") == 0) {
-                        disk = atoi(tokens.tokens[i+1]);
+                    if (strcmp(tokens.tokens[i], "-b") == 0) {
+                        budget = atoi(tokens.tokens[i+1]);
+                    } else if (strcmp(tokens.tokens[i], "-c") == 0) {
+                        capacity = atoi(tokens.tokens[i+1]);
                     } else if (strcmp(tokens.tokens[i], "-p") == 0) {
                         prio = atoi(tokens.tokens[i+1]);
                     }
                 }
                 
-                ContainerManager_CreateContainer(cm, name, task, mem, disk, prio);
+                ContainerManager_CreateContainer(cm, agency, campaign, budget, capacity, prio);
+                printf("[System] Campaign '%s' launched by agency '%s'.\n", campaign, agency);
             } else {
-                printf("Error: run requires an image/name and task.\n");
+                printf("Error: launch requires an agency name and campaign type.\n");
             }
         }
-        else if (strcmp(cmd, "ps") == 0) {
+        else if (strcmp(cmd, "campaigns") == 0 || strcmp(cmd, "ps") == 0) {
             ContainerManager_ListContainers(cm);
         }
-        else if (strcmp(cmd, "stop") == 0) {
+        else if (strcmp(cmd, "pause") == 0 || strcmp(cmd, "stop") == 0) {
             if (tokens.count >= 2) {
                 ContainerManager_StopContainer(cm, tokens.tokens[1]);
+                printf("[System] Campaign paused for agency '%s'.\n", tokens.tokens[1]);
             } else {
-                printf("Usage: stop <name>\n");
+                printf("Usage: pause <agency>\n");
             }
         }
         else if (strcmp(cmd, "clear") == 0) {
@@ -134,40 +150,48 @@ int main() {
 #endif
             printHelp();
         }
-        else if (strcmp(cmd, "stats") == 0 || strcmp(cmd, "compare") == 0 || strcmp(cmd, "state") == 0) {
-            printf("\n[Module 2/6] ALGORITHM COMPARISON REPORT\n");
+        else if (strcmp(cmd, "analytics") == 0 || strcmp(cmd, "stats") == 0 || strcmp(cmd, "compare") == 0 || strcmp(cmd, "report") == 0) {
+            printf("\n[Marketing Analytics] Campaign Scheduling & Resource Safety Report\n");
             
             // Scheduling comparison
             printf("\n--- CPU Scheduling Comparison ---\n");
-            Process pbatch1[2];
-            pbatch1[0] = *Process_Create(1, "Job1", 0, 10, 0);
-            pbatch1[1] = *Process_Create(2, "Job2", 2, 5, 0);
+            Process* campaignA = Process_Create(1, "CampaignA", 0, 8, 1);
+            Process* campaignB = Process_Create(2, "CampaignB", 1, 6, 2);
+            Process campaignBatch1[2];
+            campaignBatch1[0] = *campaignA;
+            campaignBatch1[1] = *campaignB;
+            Process_Destroy(campaignA);
+            Process_Destroy(campaignB);
             
-            printf(">> FCFS Strategy:\n");
+            printf(">> FCFS Campaign Scheduling:\n");
             FCFSScheduler* fcfs = FCFSScheduler_Create();
-            fcfs->base.schedule((Scheduler*)fcfs, pbatch1, 2);
+            fcfs->base.schedule((Scheduler*)fcfs, campaignBatch1, 2);
             fcfs->base.destroy((Scheduler*)fcfs);
             
-            Process pbatch2[2];
-            pbatch2[0] = *Process_Create(1, "Job1", 0, 10, 0);
-            pbatch2[1] = *Process_Create(2, "Job2", 2, 5, 0);
+            Process* campaignC = Process_Create(3, "CampaignA", 0, 8, 1);
+            Process* campaignD = Process_Create(4, "CampaignB", 1, 6, 2);
+            Process campaignBatch2[2];
+            campaignBatch2[0] = *campaignC;
+            campaignBatch2[1] = *campaignD;
+            Process_Destroy(campaignC);
+            Process_Destroy(campaignD);
             
-            printf("\n>> Round Robin (Quantum=3) Strategy:\n");
+            printf("\n>> Round Robin Campaign Scheduling (Quantum=3):\n");
             RoundRobinScheduler* rr = RoundRobinScheduler_Create(3);
-            rr->base.schedule((Scheduler*)rr, pbatch2, 2);
+            rr->base.schedule((Scheduler*)rr, campaignBatch2, 2);
             rr->base.destroy((Scheduler*)rr);
             
-            // Memory comparison
-            printf("\n--- Memory Page Replacement Comparison ---\n");
-            int stream[] = {1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5};
-            int stream_size = sizeof(stream) / sizeof(stream[0]);
+            // Memory comparison for analytics cache
+            printf("\n--- Marketing Analytics Cache Comparison ---\n");
+            int pageStream[] = {1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5};
+            int streamSize = sizeof(pageStream) / sizeof(pageStream[0]);
             
             MemoryManager* lru = MemoryManager_Create(3);
             FIFOMemoryManager* fifo = FIFOMemoryManager_Create(3);
             
-            for (int i = 0; i < stream_size; i++) {
-                MemoryManager_AccessPage(lru, stream[i]);
-                FIFOMemoryManager_AccessPage(fifo, stream[i]);
+            for (int i = 0; i < streamSize; i++) {
+                MemoryManager_AccessPage(lru, pageStream[i]);
+                FIFOMemoryManager_AccessPage(fifo, pageStream[i]);
             }
             
             printf("LRU Page Faults: %d\n", MemoryManager_GetPageFaults(lru));
@@ -175,8 +199,32 @@ int main() {
             
             MemoryManager_Destroy(lru);
             FIFOMemoryManager_Destroy(fifo);
-        }
-        else if (strcmp(cmd, "sync") == 0) {
+            
+            // Banker's Algorithm for campaign resource safety
+            printf("\n--- Deadlock Prevention (Banker's Algorithm) ---\n");
+            BankersAlgorithm* bankers = BankersAlgorithm_Create(3, 2);
+            int available[2] = { cm->totalRAM - cm->usedRAM, cm->totalDisk - cm->usedDisk };
+            BankersAlgorithm_SetAvailable(bankers, available);
+            
+            int alloc0[2] = {20, 5};
+            int alloc1[2] = {30, 8};
+            int alloc2[2] = {10, 3};
+            BankersAlgorithm_SetAllocation(bankers, 0, alloc0);
+            BankersAlgorithm_SetAllocation(bankers, 1, alloc1);
+            BankersAlgorithm_SetAllocation(bankers, 2, alloc2);
+            
+            int max0[2] = {25, 6};
+            int max1[2] = {35, 10};
+            int max2[2] = {15, 5};
+            BankersAlgorithm_SetMaxNeed(bankers, 0, max0);
+            BankersAlgorithm_SetMaxNeed(bankers, 1, max1);
+            BankersAlgorithm_SetMaxNeed(bankers, 2, max2);
+            
+            bool safe = BankersAlgorithm_IsSafe(bankers);
+            printf("Resource allocation state is %s.\n", safe ? "SAFE" : "UNSAFE");
+            BankersAlgorithm_Destroy(bankers);
+            
+            // Synchronization simulation for shared marketing resources
             ResourceSync* sync = ResourceSync_Create();
             ResourceSync_AccessSharedFile(sync, 1);
             ResourceSync_UseSharedDevice(sync, 2);

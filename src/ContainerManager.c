@@ -20,11 +20,11 @@ void ContainerManager_Destroy(ContainerManager* cm) {
     if (cm) free(cm);
 }
 
-void ContainerManager_SetGlobalResources(ContainerManager* cm, int ram, int disk) {
+void ContainerManager_SetGlobalResources(ContainerManager* cm, int budget, int capacity) {
     if (!cm) return;
-    cm->totalRAM = ram;
-    cm->totalDisk = disk;
-    printf("[Host] System Resources Set: RAM=%dMB, Disk=%dMB\n", cm->totalRAM, cm->totalDisk);
+    cm->totalRAM = budget;
+    cm->totalDisk = capacity;
+    printf("[Host] Marketing Resources Set: Budget=$%dK, Capacity=%d units\n", cm->totalRAM, cm->totalDisk);
 }
 
 void ContainerManager_CreateContainer(ContainerManager* cm, const char* containerName, 
@@ -33,24 +33,24 @@ void ContainerManager_CreateContainer(ContainerManager* cm, const char* containe
     
     // Resource validation
     if (cm->usedRAM + memLimit > cm->totalRAM) {
-        fprintf(stderr, "Error: Not enough RAM! Required: %dMB, Available: %dMB\n", 
+        fprintf(stderr, "Error: Not enough budget! Required: $%dK, Available: $%dK\n", 
                 memLimit, cm->totalRAM - cm->usedRAM);
         return;
     }
     if (cm->usedDisk + diskLimit > cm->totalDisk) {
-        fprintf(stderr, "Error: Not enough Disk! Required: %dMB, Available: %dMB\n", 
+        fprintf(stderr, "Error: Not enough capacity! Required: %d units, Available: %d units\n", 
                 diskLimit, cm->totalDisk - cm->usedDisk);
         return;
     }
     
-    // Create workspace directory
+    // Create campaigns directory and workspace
     char workspace[768];
-    snprintf(workspace, sizeof(workspace) - 1, "containers/%s", containerName);
+    snprintf(workspace, sizeof(workspace) - 1, "campaigns/%s", containerName);
     
     // Use a large enough buffer to avoid truncation warnings
 #ifdef _WIN32
     char mkdirCmd[2048];
-    snprintf(mkdirCmd, sizeof(mkdirCmd), "if not exist \"%s\" mkdir \"%s\"", workspace, workspace);
+    snprintf(mkdirCmd, sizeof(mkdirCmd), "if not exist \"campaigns\" mkdir \"campaigns\" && if not exist \"%s\" mkdir \"%s\"", workspace, workspace);
     system(mkdirCmd);
 #else
     char mkdirCmd[2048];
@@ -83,21 +83,21 @@ void ContainerManager_CreateContainer(ContainerManager* cm, const char* containe
     cm->containerCount++;
     
     ContainerManager_SaveState(cm);
-    printf("[Host] Container %s successfully deployed.\n", containerName);
+    printf("[Host] Campaign %s successfully deployed.\n", containerName);
 }
 
 void ContainerManager_ListContainers(ContainerManager* cm) {
     if (!cm) return;
     
-    printf("\nSYSTEM LOAD: [RAM: %d/%dMB] [DISK: %d/%dMB]\n", 
+    printf("\nSYSTEM LOAD: [BUDGET: $%dK/$%dK] [CAPACITY: %d/%d units]\n", 
            cm->usedRAM, cm->totalRAM, cm->usedDisk, cm->totalDisk);
     printf("--------------------------------------------------------------------------------\n");
-    printf("CONTAINER ID\tNAME\t\tSTATUS\t\tMEM\tDISK\tPRIO\n");
+    printf("CAMPAIGN ID\tAGENCY\t\tSTATUS\t\tBUDGET\tCAP\tPRIO\n");
     printf("--------------------------------------------------------------------------------\n");
     
     for (int i = 0; i < cm->containerCount; i++) {
         ContainerInfo* c = &cm->activeContainers[i];
-        printf("%d\t\t%s\t\t%s\t\t%dM\t%dM\t%d\n", 
+        printf("%d\t\t%s\t\t%s\t\t$%dK\t%d\t%d\n", 
                c->pid, c->name, c->status, c->memoryLimit, c->diskLimit, c->cpuPriority);
     }
 }
@@ -109,13 +109,13 @@ void ContainerManager_StopContainer(ContainerManager* cm, const char* name) {
         if (strcmp(cm->activeContainers[i].name, name) == 0) {
             ContainerInfo* c = &cm->activeContainers[i];
             if (strcmp(c->status, "Exited") == 0) {
-                printf("Container %s is already stopped.\n", name);
+                printf("Campaign for %s is already paused.\n", name);
                 return;
             }
             strcpy(c->status, "Exited");
             cm->usedRAM -= c->memoryLimit;
             cm->usedDisk -= c->diskLimit;
-            printf("Container %s stopped. Resources released.\n", name);
+            printf("Campaign for %s paused. Resources released.\n", name);
             ContainerManager_SaveState(cm);
             return;
         }
@@ -125,6 +125,13 @@ void ContainerManager_StopContainer(ContainerManager* cm, const char* name) {
 
 void ContainerManager_SaveState(ContainerManager* cm) {
     if (!cm) return;
+    
+    // Ensure campaigns directory exists for state persistence
+#ifdef _WIN32
+    system("if not exist \"campaigns\" mkdir \"campaigns\"");
+#else
+    system("mkdir -p campaigns");
+#endif
     
     FILE* f = fopen(STATE_FILE, "w");
     if (!f) return;
